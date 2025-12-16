@@ -17,14 +17,6 @@ antora:
       solveButton: true
 
 tabs:
-  - name: "Automation controller WebUI"
-    url: https://controller-${guid}.${domain}/
-    external: false
-  - name: "Visual Studio Code"
-    url: https://vscode-${guid}.${domain}/?folder=/home/rhel
-    external: false
   - name: ">_Controller-Terminal"
     url: /wetty_controller
-  - name: ">_Code-Server-Terminal"
-    url: /wetty_vscode
 
