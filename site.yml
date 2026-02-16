@@ -1,12 +1,12 @@
 ---
 site:
-  title: "Network automation: Backup and restore"
+  title: "LiteMaaS API Key Test"
   url: https://redhat-scholars.github.io/course-template
   start_page: modules::index.adoc
 
 asciidoc:
   attributes:
-    lab_name: "Network automation: Backup and restore"
+    lab_name: "LiteMaaS API Key Test"
     release-version: master
     page-pagination: true
 
