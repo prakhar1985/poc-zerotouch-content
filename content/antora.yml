@@ -1,3 +1,7 @@
 ---
 name: modules
 version: master
+
+asciidoc:
+  attributes:
+    lab_name: "LiteMaaS API Key Test"
