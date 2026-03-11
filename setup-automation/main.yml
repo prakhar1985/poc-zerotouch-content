@@ -1,46 +1,36 @@
 ---
-- name: Read LiteMaaS vars from user data
+- name: Create inventory
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Add bastion to inventory
-      ansible.builtin.add_host:
-        name: bastion
-        ansible_host: "{{ lookup('env', 'BASTION_HOST') }}"
-        ansible_user: "{{ lookup('env', 'BASTION_USER') }}"
-        ansible_password: "{{ lookup('env', 'BASTION_PASSWORD') }}"
-        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+  - name: Add bastion host
+    ansible.builtin.add_host:
+      name: "{{ lookup('ansible.builtin.env', 'BASTION_HOST') }}"
+      ansible_ssh_host: "{{ lookup('ansible.builtin.env', 'BASTION_HOST') }}"
+      ansible_ssh_port: "{{ lookup('ansible.builtin.env', 'BASTION_PORT') }}"
+      ansible_ssh_user: "{{ lookup('ansible.builtin.env', 'BASTION_USER') }}"
+      ansible_ssh_pass: "{{ lookup('ansible.builtin.env', 'BASTION_PASSWORD') }}"
+      ansible_become_password: "{{ lookup('ansible.builtin.env', 'BASTION_PASSWORD') }}"
 
-    - name: Read litellm_api_base_url
-      ansible.builtin.slurp:
-        src: /user_data/litellm_api_base_url
-      register: r_api_url
-      ignore_errors: true
-
-    - name: Read litellm_virtual_key
-      ansible.builtin.slurp:
-        src: /user_data/litellm_virtual_key
-      register: r_api_key
-      ignore_errors: true
-
-    - name: Read litellm_available_models_list
-      ansible.builtin.slurp:
-        src: /user_data/litellm_available_models_list
-      register: r_models
-      ignore_errors: true
-
-- name: Write LiteMaaS vars to bastion .bashrc
-  hosts: bastion
+- name: Setup bastion
+  hosts: all:!localhost
   gather_facts: false
+  vars:
+    litellm_api_url: "{{ lookup('ansible.builtin.file', '/user_data/litellm_api_base_url') | default('') }}"
+    litellm_api_key: "{{ lookup('ansible.builtin.file', '/user_data/litellm_virtual_key') | default('') }}"
+    litellm_models: "{{ lookup('ansible.builtin.file', '/user_data/litellm_available_models_list') | default('') }}"
   tasks:
-    - name: Add LiteMaaS env vars to .bashrc
-      ansible.builtin.blockinfile:
-        path: "/home/{{ lookup('env', 'BASTION_USER') }}/.bashrc"
-        marker: "# {mark} LITEMAAS ENV VARS"
-        block: |
-          export LITELLM_API_URL="{{ hostvars['localhost']['r_api_url'].content | b64decode | trim }}"
-          export LITELLM_API_KEY="{{ hostvars['localhost']['r_api_key'].content | b64decode | trim }}"
-          export LITELLM_MODELS="{{ hostvars['localhost']['r_models'].content | b64decode | trim }}"
-      when:
-        - hostvars['localhost']['r_api_key'] is not failed
-        - hostvars['localhost']['r_api_key'].content is defined
+  - name: Wait for bastion to be reachable
+    ansible.builtin.wait_for_connection:
+      timeout: 300
+      delay: 10
+
+  - name: Write LiteMaaS env vars to .bashrc
+    ansible.builtin.blockinfile:
+      path: "/home/{{ lookup('ansible.builtin.env', 'BASTION_USER') }}/.bashrc"
+      marker: "# {mark} LITEMAAS ENV VARS"
+      block: |
+        export LITELLM_API_URL="{{ litellm_api_url }}"
+        export LITELLM_API_KEY="{{ litellm_api_key }}"
+        export LITELLM_MODELS="{{ litellm_models }}"
+    when: litellm_api_key | length > 0
