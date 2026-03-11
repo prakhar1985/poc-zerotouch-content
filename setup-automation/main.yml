@@ -3,48 +3,5 @@
   hosts: localhost
   gather_facts: false
   tasks:
-  - name: Add bastion host
-    ansible.builtin.add_host:
-      name: "{{ lookup('ansible.builtin.env', 'BASTION_HOST') }}"
-      ansible_ssh_host: "{{ lookup('ansible.builtin.env', 'BASTION_HOST') }}"
-      ansible_ssh_port: "{{ lookup('ansible.builtin.env', 'BASTION_PORT') }}"
-      ansible_ssh_user: "{{ lookup('ansible.builtin.env', 'BASTION_USER') }}"
-      ansible_ssh_pass: "{{ lookup('ansible.builtin.env', 'BASTION_PASSWORD') }}"
-      ansible_become_password: "{{ lookup('ansible.builtin.env', 'BASTION_PASSWORD') }}"
-
-  - name: Read litellm_api_base_url from userdata ConfigMap
-    ansible.builtin.command:
-      cmd: kubectl get configmap showroom-userdata -o jsonpath='{.data.litellm_api_base_url}'
-    register: r_api_url
-    ignore_errors: true
-
-  - name: Read litellm_virtual_key from userdata ConfigMap
-    ansible.builtin.command:
-      cmd: kubectl get configmap showroom-userdata -o jsonpath='{.data.litellm_virtual_key}'
-    register: r_api_key
-    ignore_errors: true
-
-  - name: Read litellm_available_models_list from userdata ConfigMap
-    ansible.builtin.command:
-      cmd: kubectl get configmap showroom-userdata -o jsonpath='{.data.litellm_available_models_list}'
-    register: r_models
-    ignore_errors: true
-
-- name: Write LiteMaaS vars to bastion .bashrc
-  hosts: all:!localhost
-  gather_facts: false
-  tasks:
-  - name: Wait for bastion to be reachable
-    ansible.builtin.wait_for_connection:
-      timeout: 60
-      delay: 5
-
-  - name: Add LiteMaaS env vars to .bashrc
-    ansible.builtin.blockinfile:
-      path: "/home/{{ lookup('ansible.builtin.env', 'BASTION_USER') }}/.bashrc"
-      marker: "# {mark} LITEMAAS ENV VARS"
-      block: |
-        export LITELLM_API_URL="{{ hostvars['localhost']['r_api_url'].stdout | default('') }}"
-        export LITELLM_API_KEY="{{ hostvars['localhost']['r_api_key'].stdout | default('') }}"
-        export LITELLM_MODELS="{{ hostvars['localhost']['r_models'].stdout | default('') }}"
-    when: hostvars['localhost']['r_api_key'].stdout | default('') | length > 0
+    - debug:
+        msg: "nothing to do"
