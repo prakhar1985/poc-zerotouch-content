@@ -12,25 +12,39 @@
       ansible_ssh_pass: "{{ lookup('ansible.builtin.env', 'BASTION_PASSWORD') }}"
       ansible_become_password: "{{ lookup('ansible.builtin.env', 'BASTION_PASSWORD') }}"
 
-- name: Setup bastion
+  - name: Read litellm_api_base_url from userdata ConfigMap
+    ansible.builtin.command:
+      cmd: kubectl get configmap showroom-userdata -o jsonpath='{.data.litellm_api_base_url}'
+    register: r_api_url
+    ignore_errors: true
+
+  - name: Read litellm_virtual_key from userdata ConfigMap
+    ansible.builtin.command:
+      cmd: kubectl get configmap showroom-userdata -o jsonpath='{.data.litellm_virtual_key}'
+    register: r_api_key
+    ignore_errors: true
+
+  - name: Read litellm_available_models_list from userdata ConfigMap
+    ansible.builtin.command:
+      cmd: kubectl get configmap showroom-userdata -o jsonpath='{.data.litellm_available_models_list}'
+    register: r_models
+    ignore_errors: true
+
+- name: Write LiteMaaS vars to bastion .bashrc
   hosts: all:!localhost
   gather_facts: false
-  vars:
-    litellm_api_url: "{{ lookup('ansible.builtin.file', '/user_data/litellm_api_base_url') | default('') }}"
-    litellm_api_key: "{{ lookup('ansible.builtin.file', '/user_data/litellm_virtual_key') | default('') }}"
-    litellm_models: "{{ lookup('ansible.builtin.file', '/user_data/litellm_available_models_list') | default('') }}"
   tasks:
   - name: Wait for bastion to be reachable
     ansible.builtin.wait_for_connection:
-      timeout: 300
-      delay: 10
+      timeout: 60
+      delay: 5
 
-  - name: Write LiteMaaS env vars to .bashrc
+  - name: Add LiteMaaS env vars to .bashrc
     ansible.builtin.blockinfile:
       path: "/home/{{ lookup('ansible.builtin.env', 'BASTION_USER') }}/.bashrc"
       marker: "# {mark} LITEMAAS ENV VARS"
       block: |
-        export LITELLM_API_URL="{{ litellm_api_url }}"
-        export LITELLM_API_KEY="{{ litellm_api_key }}"
-        export LITELLM_MODELS="{{ litellm_models }}"
-    when: litellm_api_key | length > 0
+        export LITELLM_API_URL="{{ hostvars['localhost']['r_api_url'].stdout | default('') }}"
+        export LITELLM_API_KEY="{{ hostvars['localhost']['r_api_key'].stdout | default('') }}"
+        export LITELLM_MODELS="{{ hostvars['localhost']['r_models'].stdout | default('') }}"
+    when: hostvars['localhost']['r_api_key'].stdout | default('') | length > 0
